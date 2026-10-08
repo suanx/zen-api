@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Playground · Zen API</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e13;
+    --card: #141920;
+    --line: #232b36;
+    --fg: #e6edf3;
+    --dim: #8b949e;
+    --acc: #3fb950;
+    --acc2: #1f6feb;
+    --warn: #d29922;
+    --dead: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.7 ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 18px 56px; }
+  a { color: var(--acc2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 22px 0 18px;
+    border-bottom: 1px solid var(--line); margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .logo { display: inline-flex; align-items: center; gap: 9px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 10px var(--acc); }
+  .logo b { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  h1 { font-size: 19px; margin: 0; font-weight: 600; }
+  header .sp { flex: 1; }
+  header a.back { color: var(--dim); font-size: 13px; }
+
+  .notice {
+    border-left: 3px solid var(--warn); background: rgba(210,153,34,.07);
+    border-radius: 0 8px 8px 0; padding: 11px 14px; font-size: 13px; color: var(--dim); margin-bottom: 20px;
+  }
+  .notice b { color: var(--warn); }
+
+  .grid { display: grid; grid-template-columns: 380px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .card + .card { margin-top: 14px; }
+  .ct { font-size: 13px; color: var(--dim); margin: 0 0 14px; letter-spacing: .04em; text-transform: uppercase; }
+
+  label { display: block; font-size: 12px; color: var(--dim); margin: 13px 0 5px; }
+  label:first-of-type { margin-top: 0; }
+  input, select, textarea {
+    width: 100%; background: #0b0e13; border: 1px solid var(--line); color: var(--fg);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--acc2); }
+  textarea { resize: vertical; min-height: 74px; line-height: 1.6; }
+  .hint { font-size: 11.5px; color: var(--dim); margin-top: 5px; }
+
+  .row { display: flex; gap: 9px; align-items: center; }
+  .row > div { flex: 1; }
+  .inline { display: flex; gap: 10px; }
+
+  button {
+    font-family: inherit; font-size: 13px; font-weight: 500; border-radius: 8px;
+    padding: 9px 16px; cursor: pointer; border: 1px solid transparent; transition: .15s;
+  }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-p { background: var(--acc); color: #04140a; flex: 1; }
+  .btn-p:hover:not(:disabled) { background: #4ac45d; }
+  .btn-s { background: transparent; border-color: var(--line); color: var(--fg); }
+  .btn-s:hover:not(:disabled) { border-color: #3d4753; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  .chk { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dim); cursor: pointer; margin-top: 12px; }
+  .chk input { width: auto; }
+
+  .out {
+    background: #0b0e13; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; min-height: 200px; white-space: pre-wrap; word-break: break-word;
+    font-size: 13.5px; line-height: 1.7;
+  }
+  .out.empty { color: #5c6472; }
+  .stat { font-size: 12px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+  .stat b { color: var(--fg); font-weight: 600; }
+  .err { color: var(--dead); }
+  .ok { color: var(--acc); }
+  .warnc { color: var(--warn); }
+
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-size: 12.5px; color: var(--dim); user-select: none; }
+  summary:hover { color: var(--fg); }
+  pre {
+    background: #0b0e13; border: 1px solid var(--line); border-radius: 8px;
+    padding: 11px 13px; overflow: auto; max-height: 300px; font-size: 12px; margin: 9px 0 0;
+  }
+  pre code { font-size: 12px; color: #cfd6e4; white-space: pre-wrap; word-break: break-all; }
+  .spinner { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--acc2); animation: p 1s infinite; }
+  @keyframes p { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--card); border: 1px solid var(--acc); color: var(--fg);
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; z-index: 50;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo"><span class="dot"></span><b>Zen API</b></div>
+  <h1>Playground</h1>
+  <span class="sp"></span>
+  <a class="back" href="./">← 返回首页</a>
+</header>
+
+<div class="notice">
+  <b>免费档已被上游封锁。</b>模型列表里 <code>-free</code> 系模型调用时会返回
+  <code>FreeTierError</code>；付费模型需在下方填入真实 Key。
+</div>
+
+<div class="grid">
+
+  <!-- 左：参数 -->
+  <div>
+    <div class="card">
+      <p class="ct">鉴权</p>
+
+      <label>网关口令 · Authorization</label>
+      <input id="key" type="password" placeholder="ACCESS_TOKEN；服务端配了 Key 时必填" autocomplete="off" />
+      <p class="hint">配了服务端 Key 时，客户端必须带这个口令</p>
+
+      <label>上游 Key · x-zen-key</label>
+      <input id="zenKey" type="password" placeholder="服务端没配 Key 时填你的真实 Zen Key" autocomplete="off" />
+      <p class="hint">只在本域名内转发，不会发往第三方</p>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn-s btn-sm" id="forget">清除本地保存的 Key</button>
+      </div>
+
+      <label>端点</label>
+      <select id="ep">
+        <option value="chat">/api/zen/v1/chat/completions（OpenAI）</option>
+        <option value="resp">/api/zen/v1/responses（GPT 系列）</option>
+        <option value="anth">/api/anthropic/v1/messages（Claude）</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <p class="ct">参数</p>
+
+      <label>模型</label>
+      <div class="row">
+        <select id="model" style="flex:1"><option>加载中…</option></select>
+        <button class="btn-s btn-sm" id="refresh" title="拉取模型列表">刷新</button>
+      </div>
+      <input id="modelCustom" placeholder="或手填模型 ID，留空用上面" style="margin-top:8px" />
+
+      <div class="inline" style="margin-top:12px">
+        <div>
+          <label>temperature</label>
+          <input id="temp" type="number" step="0.1" min="0" max="2" value="0.7" />
+        </div>
+        <div>
+          <label>max_tokens</label>
+          <input id="maxtok" type="number" step="1" min="1" value="1024" />
+        </div>
+      </div>
+
+      <label>System prompt（可选）</label>
+      <input id="sys" placeholder="You are a helpful assistant." />
+
+      <label>Prompt</label>
+      <textarea id="prompt">用一句话解释什么是边缘计算。</textarea>
+
+      <label class="chk">
+        <input type="checkbox" id="stream" checked /> 流式输出（SSE）
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button class="btn-p" id="send">发送请求</button>
+        <button class="btn-s" id="stop" disabled>停止</button>
+      </div>
+      <p class="hint">
+        请求直连当前域名 <code id="selfOrigin"></code>，不经第三方。<br />
+        <code>Ctrl/⌘ + Enter</code> 发送。
+      </p>
+    </div>
+  </div>
+
+  <!-- 右：输出 -->
+  <div>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <span style="font-size:12px;color:var(--dim)">响应</span>
+        <span style="flex:1"></span>
+        <button class="btn-s btn-sm" id="copyOut">复制文本</button>
+        <button class="btn-s btn-sm" id="clearOut">清空</button>
+      </div>
+
+      <div class="out empty" id="out">等待请求…</div>
+      <div class="stat" id="stat"></div>
+
+      <details>
+        <summary>原始响应 / SSE 事件</summary>
+        <pre><code id="raw">（空）</code></pre>
+      </details>
+      <details>
+        <summary>等价 curl 命令</summary>
+        <pre><code id="curlBox">（空）</code></pre>
+      </details>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ORIGIN = location.origin;
+$('selfOrigin').textContent = ORIGIN;
+
+/* ---------- Key 存储：仅本机 localStorage ---------- */
+const LS_GATE = 'zen_gate_token';
+const LS_UP = 'zen_upstream_key';
+
+function loadKeys() {
+  const g = localStorage.getItem(LS_GATE);
+  const u = localStorage.getItem(LS_UP);
+  if (g) $('key').value = g;
+  if (u) $('zenKey').value = u;
+}
+function saveKeys() {
+  const g = $('key').value.trim();
+  const u = $('zenKey').value.trim();
+  if (g) localStorage.setItem(LS_GATE, g); else localStorage.removeItem(LS_GATE);
+  if (u) localStorage.setItem(LS_UP, u); else localStorage.removeItem(LS_UP);
+}
+$('key').addEventListener('change', saveKeys);
+$('zenKey').addEventListener('change', saveKeys);
+loadKeys();
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1800);
+}
+$('forget').addEventListener('click', () => {
+  localStorage.removeItem(LS_GATE);
+  localStorage.removeItem(LS_UP);
+  $('key').value = '';
+  $('zenKey').value = '';
+  toast('已清除本地保存的 Key');
+});
+
+/* ---------- 端点定义 ---------- */
+const ENDPOINTS = {
+  chat: { url: '/api/zen/v1/chat/completions', build: buildChat, parse: parseChat },
+  resp: { url: '/api/zen/v1/responses', build: buildResp, parse: parseResp },
+  anth: { url: '/api/anthropic/v1/messages', build: buildAnth, parse: parseAnth },
+};
+
+function model() {
+  return ($('modelCustom').value || $('model').value || '').trim();
+}
+
+function buildChat() {
+  const msgs = [];
+  if ($('sys').value.trim()) msgs.push({ role: 'system', content: $('sys').value.trim() });
+  msgs.push({ role: 'user', content: $('prompt').value });
+  return {
+    model: model(),
+    messages: msgs,
+    temperature: Number($('temp').value),
+    max_tokens: Number($('maxtok').value),
+    stream: $('stream').checked,
+  };
+}
+function buildResp() {
+  const b = {
+    model: model(),
+    input: $('prompt').value,
+    temperature: Number($('temp').value),
+    max_output_tokens: Number($('maxtok').value),
+    stream: $('stream').checked,
+  };
+  if ($('sys').value.trim()) b.instructions = $('sys').value.trim();
+  return b;
+}
+function buildAnth() {
+  const b = {
+    model: model(),
+    messages: [{ role: 'user', content: $('prompt').value }],
+    max_tokens: Number($('maxtok').value),
+    temperature: Number($('temp').value),
+    stream: $('stream').checked,
+  };
+  if ($('sys').value.trim()) b.system = $('sys').value.trim();
+  return b;
+}
+
+/* ---------- 响应解析 ---------- */
+function parseChat(ev) {
+  const c = ev.choices && ev.choices[0];
+  if (c && c.delta && typeof c.delta.content === 'string') return { text: c.delta.content, usage: ev.usage };
+  if (c && c.message && typeof c.message.content === 'string') return { text: c.message.content, usage: ev.usage };
+  if (c && c.message && Array.isArray(c.message.content)) {
+    return { text: c.message.content.map((p) => p.text || '').join(''), usage: ev.usage };
+  }
+  return { text: '', usage: ev.usage };
+}
+function parseResp(ev) {
+  if (ev.type === 'response.output_text.delta') return { text: ev.delta || '' };
+  if (ev.type === 'response.completed' && ev.response) return { text: '', usage: ev.response.usage };
+  if (Array.isArray(ev.output)) {
+    const t = ev.output
+      .filter((o) => o.type === 'message')
+      .map((o) => (o.content || []).map((p) => p.text || '').join(''))
+      .join('');
+    if (t) return { text: t, usage: ev.usage };
+  }
+  if (typeof ev.output_text === 'string') return { text: ev.output_text, usage: ev.usage };
+  return { text: '' };
+}
+function parseAnth(ev) {
+  if (ev.type === 'content_block_delta' && ev.delta) return { text: ev.delta.text || '', usage: ev.usage };
+  if (ev.type === 'message_delta' && ev.usage) return { text: '', usage: ev.usage };
+  if (Array.isArray(ev.content)) {
+    return { text: ev.content.map((c) => c.text || '').join(''), usage: ev.usage };
+  }
+  return { text: '' };
+}
+
+/* ---------- 请求头 ---------- */
+function authHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const k = $('key').value.trim();
+  const zk = $('zenKey').value.trim();
+  if (k) h['Authorization'] = 'Bearer ' + k;
+  if (zk) {
+    h['x-zen-key'] = zk;
+    if (!k) h['Authorization'] = 'Bearer ' + zk;
+  }
+  if ($('ep').value === 'anth') h['anthropic-version'] = '2023-06-01';
+  return h;
+}
+
+/** Key 只保留首尾各 2 位，其余一律打码 */
+function mask(v) {
+  const s = String(v || '');
+  if (s.length <= 8) return '********';
+  return s.slice(0, 2) + '****' + s.slice(-2);
+}
+
+function renderCurl(ep, body) {
+  const h = authHeaders();
+  if (h['x-zen-key']) h['x-zen-key'] = mask(h['x-zen-key']);
+  if (h['Authorization']) h['Authorization'] = mask(h['Authorization']);
+  const head = Object.entries(h)
+    .map(([k, v]) => `  -H "${k}: ${v}"`)
+    .join(' \\\n');
+  $('curlBox').textContent =
+    `curl ${ORIGIN}${ep.url} \\\n${head} \\\n  -d '${JSON.stringify(body)}'`;
+}
+
+/* ---------- 状态渲染（全部走 textContent，不拼HTML） ---------- */
+function setStatus(node, color, text) {
+  node.textContent = '';
+  const s = document.createElement('span');
+  s.className = color;
+  s.textContent = text;
+  node.appendChild(s);
+}
+
+async function loadModels() {
+  const sel = $('model');
+  sel.textContent = '加载中…';
+  try {
+    const r = await fetch(ORIGIN + '/api/zen/v1/models', { headers: authHeaders() });
+    const j = await r.json();
+    const list = (j.data || (Array.isArray(j) ? j : [])).map((m) => m.id || m).filter(Boolean);
+    if (!r.ok || !list.length) throw new Error((j.error && j.error.message) || 'empty');
+    sel.textContent = '';
+    for (const id of list) {
+      const o = document.createElement('option');
+      o.textContent = id;
+      sel.appendChild(o);
+    }
+    const pref = list.find((id) => /^gpt-5\.4$/.test(id)) || list.find((id) => !/-free$/.test(id)) || list[0];
+    sel.value = pref;
+  } catch (e) {
+    sel.textContent = '';
+    const o = document.createElement('option');
+    o.value = '';
+    o.textContent = '（拉取失败，请手填）';
+    sel.appendChild(o);
+    setStatus($('stat'), 'warnc', '模型列表拉取失败：' + (e.message || e));
+  }
+}
+
+function fmtUsage(u) {
+  if (!u) return '';
+  const i = u.input_tokens != null ? u.input_tokens : u.prompt_tokens;
+  const o = u.output_tokens != null ? u.output_tokens : u.completion_tokens;
+  const t = u.total_tokens != null ? u.total_tokens : (i != null && o != null ? i + o : undefined);
+  const p = [];
+  if (i != null) p.push('输入 ' + i);
+  if (o != null) p.push('输出 ' + o);
+  if (t != null) p.push('合计 ' + t);
+  return p.join(' · ');
+}
+
+/* ---------- 发送 ---------- */
+let controller = null;
+
+async function send(forceNoStream) {
+  if (!model()) return alert('请填写或选择模型 ID');
+  const ep = ENDPOINTS[$('ep').value];
+  const body = ep.build();
+  if (forceNoStream) body.stream = false;
+  renderCurl(ep, body);
+
+  controller = new AbortController();
+  const t0 = performance.now();
+  let firstByte = null;
+
+  $('send').disabled = true;
+  $('stop').disabled = false;
+  $('out').classList.remove('empty');
+  $('out').textContent = '';
+  $('raw').textContent = '';
+  $('stat').textContent = '';
+  const spin = document.createElement('span');
+  spin.className = 'spinner';
+  $('stat').appendChild(spin);
+  $('stat').appendChild(document.createTextNode(' 请求中…'));
+
+  try {
+    const res = await fetch(ORIGIN + ep.url, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      let msg = txt;
+      try {
+        const j = JSON.parse(txt);
+        msg = (j.error && j.error.message) || j.message || txt;
+      } catch (e) {}
+      $('out').textContent = 'HTTP ' + res.status + ' — ' + msg;
+      $('out').classList.add('empty');
+      $('raw').textContent = txt.slice(0, 4000);
+      setStatus($('stat'), 'err', '失败 HTTP ' + res.status);
+      return;
+    }
+
+    const total = performance.now() - t0;
+    const isStream = body.stream === true && (res.headers.get('content-type') || '').includes('event-stream');
+
+    if (!isStream) {
+      const j = await res.json();
+      $('raw').textContent = JSON.stringify(j, null, 2);
+      const p = ep.parse(j);
+      $('out').textContent = p.text || '（无文本内容，见原始响应）';
+      $('stat').textContent = '';
+      setStatus($('stat'), 'ok', '200 · 耗时 ' + Math.round(total) + 'ms');
+      const u = fmtUsage(p.usage || j.usage);
+      if (u) setStatus($('stat'), 'dim', ' · ' + u);
+      return;
+    }
+
+    // SSE
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    let acc = '';
+    let lastUsage = null;
+    const events = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (firstByte === null) firstByte = performance.now() - t0;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        const s = line.trim();
+        if (!s.startsWith('data:')) continue;
+        const payload = s.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        let ev;
+        try { ev = JSON.parse(payload); } catch (e) { continue; }
+        events.push(ev);
+        const p = ep.parse(ev);
+        if (p.usage) lastUsage = p.usage;
+        if (p.text) {
+          acc += p.text;
+          $('out').textContent = acc;
+        }
+      }
+    }
+    $('raw').textContent = events.length ? JSON.stringify(events, null, 2) : '（未解析到 SSE 事件）';
+    const done2 = performance.now() - t0;
+    $('stat').textContent = '';
+    setStatus($('stat'), 'ok',
+      '200 流式 · 首字 ' + Math.round(firstByte || 0) + 'ms · 总耗时 ' + Math.round(done2) + 'ms');
+    const u = fmtUsage(lastUsage);
+    if (u) setStatus($('stat'), 'dim', ' · ' + u);
+    setStatus($('stat'), 'dim', ' · 事件 ' + events.length);
+    if (!acc) {
+      $('out').textContent = '（收到响应但无文本内容，展开原始响应查看）';
+      $('out').classList.add('empty');
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      setStatus($('stat'), 'warnc', '已停止');
+    } else {
+      // 流式失败自动降级为非流式重试一次，区分「流式不支持」与「网关不通」
+      if (!forceNoStream && body.stream) {
+        setStatus($('stat'), 'warnc', '流式失败，自动改用非流式重试…');
+        $('stream').checked = false;
+        $('send').disabled = false;
+        $('stop').disabled = true;
+        return send(true);
+      }
+      $('out').textContent = String(e.message || e);
+      $('out').classList.add('empty');
+      setStatus($('stat'), 'err', '请求异常（Failed to fetch = 浏览器没拿到任何响应）');
+    }
+  } finally {
+    $('send').disabled = false;
+    $('stop').disabled = true;
+    controller = null;
+  }
+}
+
+$('send').addEventListener('click', () => send());
+$('stop').addEventListener('click', () => controller && controller.abort());
+$('refresh').addEventListener('click', loadModels);
+$('clearOut').addEventListener('click', () => {
+  $('out').textContent = '等待请求…';
+  $('out').classList.add('empty');
+  $('raw').textContent = '（空）';
+  $('stat').textContent = '';
+});
+$('copyOut').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('out').textContent);
+    $('copyOut').textContent = '已复制';
+    setTimeout(() => ($('copyOut').textContent = '复制文本'), 1200);
+  } catch (e) {}
+});
+$('prompt').addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send();
+});
+
+loadModels();
+</script>
+</body>
+</html>

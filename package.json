@@ -1,0 +1,13 @@
+{
+  "name": "zen-api-proxy",
+  "version": "1.0.10",
+  "private": true,
+  "type": "module",
+  "description": "OpenCode Zen 反向代理 · EdgeOne Makers (Edge Functions)",
+  "scripts": {
+    "test": "node --experimental-default-type=module test/run.js && node --experimental-default-type=module test/routes.js",
+    "test:func": "node --experimental-default-type=module test/run.js",
+    "test:routes": "node --experimental-default-type=module test/routes.js",
+    "pack": "node scripts/pack.mjs"
+  }
+}

@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Zen API · OpenCode Zen 反向代理</title>
+<meta name="description" content="OpenCode Zen 反向代理，跑在 EdgeOne Pages 函数上。统一 OpenAI / Anthropic / Responses 端点，内置客户端身份伪装与流式折叠。" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0e13;
+    --card: #141920;
+    --line: #232b36;
+    --fg: #e6edf3;
+    --dim: #8b949e;
+    --acc: #3fb950;
+    --acc2: #1f6feb;
+    --warn: #d29922;
+    --dead: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.7 ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 18px 72px; }
+  a { color: var(--acc2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ---- Hero ---- */
+  header { padding: 56px 0 40px; border-bottom: 1px solid var(--line); margin-bottom: 36px; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .logo b { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 12px var(--acc); }
+  h1 { font-size: clamp(28px, 7vw, 42px); line-height: 1.2; margin: 0 0 14px; letter-spacing: -.02em; }
+  h1 span { color: var(--acc); }
+  .lead { font-size: 16px; color: var(--dim); margin: 0 0 26px; max-width: 640px; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    border: 1px solid transparent; transition: .15s;
+  }
+  .btn-p { background: var(--acc); color: #04140a; }
+  .btn-p:hover { background: #4ac45d; text-decoration: none; }
+  .btn-s { border-color: var(--line); color: var(--fg); }
+  .btn-s:hover { border-color: #3d4753; text-decoration: none; }
+
+  /* ---- banner ---- */
+  .banner {
+    display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 10px;
+    border-left: 3px solid var(--warn); background: rgba(210,153,34,.07); margin: 0 0 36px;
+    font-size: 13.5px;
+  }
+  .banner b { color: var(--warn); }
+  .banner p { margin: 6px 0 0; color: var(--dim); }
+  code { background: #0b0e13; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; color: #7ee787; }
+
+  /* ---- stats ---- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 36px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 14px; }
+  .stat b { display: block; font-size: 26px; line-height: 1.2; color: var(--acc); }
+  .stat span { font-size: 12px; color: var(--dim); }
+  .stat.b-warn b { color: var(--warn); }
+
+  /* ---- sections ---- */
+  section { margin: 48px 0; }
+  h2 { font-size: 20px; margin: 0 0 6px; display: flex; align-items: center; gap: 9px; }
+  h2::before { content: ""; width: 3px; height: 17px; background: var(--acc); border-radius: 2px; }
+  .sub { color: var(--dim); font-size: 14px; margin: 0 0 20px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .card h3 { margin: 0 0 7px; font-size: 15px; }
+  .card p { margin: 0; font-size: 13.5px; color: var(--dim); }
+
+  /* ---- table ---- */
+  .tbl { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 136px 1fr 96px; gap: 10px; padding: 11px 14px;
+         border-bottom: 1px solid var(--line); font-size: 13.5px; align-items: center; }
+  .row:last-child { border-bottom: 0; }
+  .row.head { background: var(--card); font-size: 12px; color: var(--dim); font-weight: 600; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 20px; text-align: center; }
+  .t-free { background: rgba(63,185,80,.14); color: var(--acc); }
+  .t-key { background: rgba(31,111,235,.14); color: #58a6ff; }
+  .t-warn { background: rgba(210,153,34,.14); color: var(--warn); }
+  .t-dead { background: rgba(248,81,73,.14); color: var(--dead); }
+  .vendor { font-size: 12.5px; color: var(--dim); }
+  .row code { word-break: break-all; }
+
+  /* ---- flow ---- */
+  .flow { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .step { display: flex; gap: 12px; padding: 9px 0; font-size: 13.5px; }
+  .step:not(:last-child) { border-bottom: 1px dashed var(--line); }
+  .n { flex: 0 0 22px; height: 22px; border-radius: 50%; background: rgba(63,185,80,.14); color: var(--acc);
+       font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+  .step div { flex: 1; }
+  .step em { display: block; color: var(--dim); font-style: normal; font-size: 12.5px; margin-top: 2px; }
+
+  /* ---- code ---- */
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+        padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.65; margin: 0; }
+  pre + pre { margin-top: 12px; }
+  pre code { background: none; padding: 0; color: #cfd6e4; font-size: 12.5px; }
+  .cm { color: var(--dim); }
+  .st { color: #a5d6ff; }
+  .ky { color: #ff7b72; }
+
+  /* ---- warn ---- */
+  .warn { border-left: 3px solid var(--warn); background: rgba(210,153,34,.07);
+          border-radius: 0 8px 8px 0; padding: 13px 16px; font-size: 13.5px; }
+  .warn b { color: var(--warn); }
+  .warn ul { margin: 8px 0 0; padding-left: 18px; color: var(--dim); }
+  .warn li { margin: 4px 0; }
+
+  footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
+           font-size: 12.5px; color: var(--dim); }
+  footer a { color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo"><span class="dot"></span><b>Zen API</b></div>
+  <h1>OpenCode Zen<br />放在<span>你自己的域名</span>下面</h1>
+  <p class="lead">
+    OpenCode Zen 的反向代理，跑在 EdgeOne Pages 函数上。三套协议统一成 OpenAI 风格端点，
+    内置客户端身份伪装、流式折叠与鉴权管控。
+  </p>
+  <div class="btns">
+    <a class="btn btn-p" href="./test.html">对话 Playground →</a>
+    <a class="btn btn-s" href="./api/zen/v1/models">查看 /v1/models</a>
+    <a class="btn btn-s" href="./health">/health</a>
+  </div>
+</header>
+
+<div class="banner">
+  <div>
+    <b>⚠ 上游已收紧免费档，实测确认</b>
+    <p>
+      现在调用 <code>-free</code> / <code>big-pickle</code> 会返回
+      <code>FreeTierError: can only be used from within OpenCode</code>，
+      与是否伪装客户端<b>无关</b>。<b>付费档（自带 Key）不受影响，照常工作。</b>
+      详见下方<a href="#status">上游现状</a>。
+    </p>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><b>3</b><span>协议兼容</span></div>
+  <div class="stat"><b>87</b><span>上游模型总数</span></div>
+  <div class="stat"><b>13</b><span>目录中免费模型</span></div>
+  <div class="stat b-warn"><b>0</b><span>当前可用免费档</span></div>
+</div>
+
+<section id="status">
+  <h2>上游现状</h2>
+  <p class="sub">动手前先看清能不能用，省得白折腾。</p>
+
+  <div class="tbl">
+    <div class="row head"><div>档位</div><div>说明</div><div>状态</div></div>
+    <div class="row">
+      <div><b>付费档</b></div>
+      <div class="vendor">87 个模型中的 74 个，需自带 Key，鉴权正常透传</div>
+      <div><span class="tag t-key">可用</span></div>
+    </div>
+    <div class="row">
+      <div><b>免费档</b></div>
+      <div class="vendor">13 个 <code>-free</code> / big-pickle，上游限制仅限官方客户端内部调用</div>
+      <div><span class="tag t-dead">已封锁</span></div>
+    </div>
+    <div class="row">
+      <div><b>模型列表</b></div>
+      <div class="vendor">匿名即可读取 <code>/v1/models</code>，共 87 条</div>
+      <div><span class="tag t-free">可用</span></div>
+    </div>
+  </div>
+
+  <div class="warn" style="margin-top:16px">
+    <b>实测记录</b>
+    <ul>
+      <li>伪装完整客户端头 + bash/read 工具 + 强制流式 → 仍返回 <code>FreeTierError</code></li>
+      <li>非流式、不带工具 → 同样 <code>FreeTierError</code></li>
+      <li>完全不带伪装头 → 仍是 <code>FreeTierError</code></li>
+      <li>带真实 Key 的付费模型 → 鉴权通过，正常返回</li>
+      <li><code>/v1/models</code> 匿名可读，说明网关本身与出网链路正常</li>
+    </ul>
+    <p style="margin:10px 0 0;color:var(--dim)">
+      结论：上游已在校验真实客户端身份，不再只看请求头。<b>本项目的价值因此转向「用自己的域名统一入口 + 协议转换 + 鉴权管控」</b>，
+      免费档能否恢复取决于上游政策，不是本地能改的。
+    </p>
+  </div>
+</section>
+
+<section id="features">
+  <h2>它解决什么</h2>
+  <p class="sub">免费档失效之后，网关本身的价值依然成立。</p>
+
+  <div class="grid">
+    <div class="card">
+      <h3>三套协议一个入口</h3>
+      <p>OpenAI <code>/chat/completions</code>、Anthropic <code>/messages</code>、Responses <code>/responses</code> 统一走同一套鉴权与改写逻辑，客户端不用各自适配。</p>
+    </div>
+    <div class="card">
+      <h3>流式折叠</h3>
+      <p>客户端要非流式时，网关把上游 SSE 折回完整 JSON，并按协议还原 <code>tool_calls</code> / <code>tool_use</code> / <code>function_call</code>，Agent 场景不会拿到自相矛盾的响应。</p>
+    </div>
+    <div class="card">
+      <h3>fail-closed 鉴权</h3>
+      <p>配了服务端 Key 却没配 <code>ACCESS_TOKEN</code> 时一律 503 且不调用上游。失败是显式的，不会静默把付费额度敞给全网。</p>
+    </div>
+    <div class="card">
+      <h3>不泄露诊断信息</h3>
+      <p>付费模式、伪装开关、重试轨迹默认都不返回。需要排查时设 <code>DEBUG=1</code> 才有 <code>x-zen-*</code> 头。</p>
+    </div>
+    <div class="card">
+      <h3>工具补齐不破坏原有</h3>
+      <p>免费档要求请求体带 <code>bash</code> / <code>read</code>。网关按协议形状<b>补齐</b>缺失项而不是整段替换，客户端自带工具不受影响。</p>
+    </div>
+    <div class="card">
+      <h3>单一实现</h3>
+      <p>三个路由共享同一份核心代码，改一处即全部生效。不会再出现「改了一个路由忘了另外两个」。</p>
+    </div>
+  </div>
+</section>
+
+<section id="flow">
+  <h2>一次请求怎么走</h2>
+  <p class="sub">从收到请求到返回，最多两次上游尝试。</p>
+
+  <div class="flow">
+    <div class="step">
+      <span class="n">1</span>
+      <div>
+        <b>fail-closed 鉴权</b>
+        <em>配了服务端 Key 就必须校验 ACCESS_TOKEN，缺失直接 503，不打上游</em>
+      </div>
+    </div>
+    <div class="step">
+      <span class="n">2</span>
+      <div>
+        <b>路径映射</b>
+        <em>/api/* 剥前缀后统一映射到 opencode.ai/zen，query 原样保留</em>
+      </div>
+    </div>
+    <div class="step">
+      <span class="n">3</span>
+      <div>
+        <b>按模型决定是否伪装</b>
+        <em>识别 free / big-pickle，注入对应协议的 bash+read 工具，必要时强制流式</em>
+      </div>
+    </div>
+    <div class="step">
+      <span class="n">4</span>
+      <div>
+        <b>鉴权分流重试</b>
+        <em>免费档优先匿名，付费档直接带 Key —— 每个付费请求只打一次上游</em>
+      </div>
+    </div>
+    <div class="step">
+      <span class="n">5</span>
+      <div>
+        <b>按协议折叠回传</b>
+        <em>客户端要非流式就把 SSE 折成对应 schema；模型列表只保留免费档</em>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="endpoints">
+  <h2>端点</h2>
+  <p class="sub">四组路径等价，按需选一条即可。</p>
+
+  <div class="tbl">
+    <div class="row head"><div>路径</div><div>上游</div><div>用途</div></div>
+    <div class="row"><div><code>/api/zen/v1/*</code></div><div class="vendor">opencode.ai/zen/v1/*</div><div class="vendor">推荐，OpenAI SDK</div></div>
+    <div class="row"><div><code>/api/anthropic/v1/*</code></div><div class="vendor">opencode.ai/zen/v1/*</div><div class="vendor">Anthropic SDK</div></div>
+    <div class="row"><div><code>/api/v1/*</code></div><div class="vendor">opencode.ai/zen/v1/*</div><div class="vendor">等价于上面两条</div></div>
+    <div class="row"><div><code>/v1/*</code></div><div class="vendor">opencode.ai/zen/v1/*</div><div class="vendor">兼容路径</div></div>
+  </div>
+</section>
+
+<section id="usage">
+  <h2>接入</h2>
+  <p class="sub">任何支持 OpenAI 兼容配置的客户端都能直接用。</p>
+
+  <pre><code><span class="cm"># OpenAI SDK</span>
+<span class="ky">import</span> OpenAI <span class="ky">from</span> <span class="st">"openai"</span>;
+
+<span class="ky">const</span> client = <span class="ky">new</span> OpenAI({
+  baseURL: <span class="st">"BASE/api/zen/v1"</span>,
+  apiKey: <span class="st">"你的 Key"</span>,
+});
+
+<span class="ky">const</span> r = <span class="ky">await</span> client.chat.completions.create({
+  model: <span class="st">"gpt-5.4"</span>,
+  messages: [{ role: <span class="st">"user"</span>, content: <span class="st">"hi"</span> }],
+  stream: <span class="ky">true</span>,
+});</code></pre>
+
+  <pre><code><span class="cm"># Anthropic SDK</span>
+base_url = <span class="st">"BASE/api/anthropic"</span>
+api_key  = <span class="st">"&lt;ACCESS_TOKEN 或你的 Key&gt;"</span></code></pre>
+
+  <pre><code><span class="cm"># curl 验证</span>
+curl BASE/api/zen/v1/chat/completions \
+  -H <span class="st">"Authorization: Bearer $KEY"</span> \
+  -H <span class="st">"Content-Type: application/json"</span> \
+  -d <span class="st">'{"model":"gpt-5.4","messages":[{"role":"user","content":"hi"}],"stream":true}'</span></code></pre>
+</section>
+
+<section id="deploy">
+  <h2>部署要点</h2>
+  <p class="sub">最容易踩的几条，完整步骤见仓库 README。</p>
+
+  <div class="warn">
+    <b>三条硬性要求</b>
+    <ul>
+      <li><b>函数地域必须选境外</b> —— opencode.ai 是境外域名，函数跑在大陆地域出网基本超时，选 <code>ap-hongkong</code></li>
+      <li><b>加速区域选「不含中国大陆」</b> —— 免备案，代价是国内访问走跨境节点</li>
+      <li><b>绑自己的域名</b> —— 平台送的默认域名在大陆只能走 3 小时预览链接</li>
+    </ul>
+  </div>
+
+  <div class="warn" style="margin-top:12px;border-left-color:var(--dead);background:rgba(248,81,73,.07)">
+    <b style="color:var(--dead)">别做成公共服务</b>
+    <ul>
+      <li>所有请求共用函数出口 IP，上游按 IP 限流，开放必撞</li>
+      <li><code>ACCESS_TOKEN</code> 不配置时代码拒绝所有请求，这是防裸奔的，别改</li>
+      <li>免费版出网仅 5 GB/月，比调用次数限制更紧</li>
+    </ul>
+  </div>
+</section>
+
+<section id="env">
+  <h2>环境变量</h2>
+  <p class="sub">控制台不允许留空，填 <code>anonymous</code> / <code>off</code> / <code>0</code> 等关闭词视为「未配置」。</p>
+
+  <div class="tbl">
+    <div class="row head"><div>变量</div><div>说明</div><div>默认</div></div>
+    <div class="row"><div><code>ACCESS_TOKEN</code></div><div class="vendor">网关口令，客户端用 <code>Authorization: Bearer</code> 携带。<b>配了服务端 Key 时必填</b></div><div><span class="tag t-key">关键</span></div></div>
+    <div class="row"><div><code>OPENCODE_API_KEY</code></div><div class="vendor">服务端上游 Key，客户端无需自带</div><div><span class="tag t-key">可选</span></div></div>
+    <div class="row"><div><code>ALLOW_OPEN_ACCESS</code></div><div class="vendor">设为 1 才允许「有 Key 但无口令」的裸奔模式</div><div><span class="tag t-warn">关</span></div></div>
+    <div class="row"><div><code>ALLOW_QUERY_TOKEN</code></div><div class="vendor">设为 1 才允许 <code>?token=</code>（会进日志与 Referer）</div><div><span class="tag t-warn">关</span></div></div>
+    <div class="row"><div><code>ALLOWED_ORIGINS</code></div><div class="vendor">逗号分隔的 Origin 白名单</div><div><span class="tag t-free">*</span></div></div>
+    <div class="row"><div><code>FREE_MODELS_ONLY</code></div><div class="vendor">/models 只返回免费模型</div><div><span class="tag t-free">1</span></div></div>
+    <div class="row"><div><code>FREE_MODEL_EXTRA</code></div><div class="vendor">额外视为免费的模型 ID（逗号分隔）</div><div><span class="tag t-free">空</span></div></div>
+    <div class="row"><div><code>ZEN_SPOOF_CLIENT</code></div><div class="vendor">官方客户端身份伪装</div><div><span class="tag t-free">1</span></div></div>
+    <div class="row"><div><code>ZEN_SPOOF_ALL</code></div><div class="vendor">付费模型也伪装</div><div><span class="tag t-free">1</span></div></div>
+    <div class="row"><div><code>ZEN_FORCE_TOOLS</code></div><div class="vendor">免费档补齐 bash / read</div><div><span class="tag t-free">1</span></div></div>
+    <div class="row"><div><code>FREE_TIER_ANONYMOUS</code></div><div class="vendor">免费档优先匿名，失败再回退 Key</div><div><span class="tag t-free">1</span></div></div>
+    <div class="row"><div><code>PUBLIC_MODELS</code></div><div class="vendor">/models 是否匿名放行</div><div><span class="tag t-free">按场景</span></div></div>
+    <div class="row"><div><code>DEBUG</code></div><div class="vendor">设为 1 才输出 <code>x-zen-*</code> 诊断头</div><div><span class="tag t-warn">0</span></div></div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <a href="./test.html">API 测试台</a> ·
+    <a href="./health">/health</a> ·
+    <a href="./api/zen/v1/models">/v1/models</a>
+  </p>
+  <p>
+    本页为反向代理的落地展示，所有请求经网关转发至 opencode.ai。
+    上游模型随时可能调整或转付费，用 /v1/models 看当前目录。
+  </p>
+</footer>
+
+</div>
+
+<script>
+  // 把代码块里的 BASE 占位替换成当前域名
+  document.querySelectorAll('pre code').forEach((el) => {
+    el.innerHTML = el.innerHTML.replace(/BASE/g, location.origin);
+  });
+</script>
+</body>
+</html>

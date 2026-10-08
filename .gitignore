@@ -1,0 +1,7 @@
+.build
+*.bak
+*.log
+node_modules/
+__pycache__/
+.workbuddy/
+.DS_Store
