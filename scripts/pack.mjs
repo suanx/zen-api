@@ -58,74 +58,20 @@ mode    : root-middleware (zip 上传形态: 仅根层函数生效, API 由 midd
 `
 fs.writeFileSync(path.join(ROOT, 'version.txt'), versionTxt)
 
-/* ---------- 4. middleware 内联（剥离 export 后替换 @pack-inline import 行） ---------- */
-const mwPath = path.join(ROOT, 'middleware.js')
-const mwSrc = fs.readFileSync(mwPath, 'utf8')
-const inlineRe = /^import\s*\{[^}]*}\s*from\s*'([^']+)'\s*\/\/\s*@pack-inline.*$/m
-const m = mwSrc.match(inlineRe)
-if (!m) {
-  console.error('middleware.js 缺少 @pack-inline 标记行，打包中止')
-  process.exit(1)
-}
-const implRel = m[1] // ./edge-functions/_shared/proxy.js
-const implSrc = fs.readFileSync(path.join(ROOT, implRel), 'utf8')
-// 剥离 export 关键字，使其成为 middleware 模块内部的普通声明
-const implInline = implSrc
-  .replace(/^export\s+(async\s+)?/gm, '$1')
-  .replace(/^export\s+/gm, '')
-const mwStandalone = mwSrc.replace(inlineRe, () => implInline)
-// 确认内联后无残留跨目录 import
-if (mwStandalone.match(/^import .*edge-functions/m)) {
-  console.error('middleware 内联后仍有跨目录 import，打包中止')
-  process.exit(1)
-}
-
-// 语法自检：内联产物必须可解析且导出 onRequest（进程内动态 import，避免 Windows spawn EBUSY）
-const tmpCheck = path.join(os.tmpdir(), 'zenapi_mw_check_' + build + '.mjs')
-fs.writeFileSync(tmpCheck, mwStandalone)
-try {
-  const mod = await import(pathToFileURL(tmpCheck).href)
-  if (typeof mod.onRequest !== 'function') {
-    throw new Error('内联产物未导出 onRequest')
-  }
-  console.log('middleware 内联完成: ' + implSrc.length + 'B 实现 -> zip 内自包含, import+语法检查通过')
-} catch (e) {
-  console.error('内联后的 middleware 校验失败：')
-  console.error(String(e.message || e).slice(0, 800))
-  try { fs.unlinkSync(tmpCheck) } catch (e2) {}
-  process.exit(1)
-}
-try { fs.unlinkSync(tmpCheck) } catch (e2) {}
-
-/* ---------- 5. 打 zip（先在临时树中替换 middleware） ---------- */
-// _zip.py 直接扫 ROOT；为让 zip 内的 middleware 是内联版而 repo 原件不动，
-// 备份放系统临时目录（避免被打进 zip），打包完成后还原。
-const bakPath = path.join(os.tmpdir(), 'zenapi_mw_repo_' + build + '.js')
-fs.copyFileSync(mwPath, bakPath)
-fs.writeFileSync(mwPath, mwStandalone)
+/* ---------- 4. 打 zip（repo 的 middleware.js 已是内联自包含版，直接打包） ---------- */
 fs.mkdirSync(path.dirname(OUT), { recursive: true })
 try {
   fs.unlinkSync(OUT)
 } catch (e) {}
 const pyList = [PY, 'python', 'py']
 let used = null
-try {
-  for (const py of pyList) {
-    try {
-      execFileSync(py, [path.join(ROOT, 'scripts', '_zip.py'), ROOT, OUT, ''], { stdio: 'inherit' })
-      used = py
-      break
-    } catch (e) {
-      /* 尝试下一个 */
-    }
-  }
-} finally {
-  // 无论成败都还原 repo 原件
+for (const py of pyList) {
   try {
-    fs.copyFileSync(bakPath, mwPath)
-    fs.unlinkSync(bakPath)
+    execFileSync(py, [path.join(ROOT, 'scripts', '_zip.py'), ROOT, OUT, ''], { stdio: 'inherit' })
+    used = py
+    break
   } catch (e) {
-    console.error('警告：还原 middleware.js 失败', e.message)
+    /* 尝试下一个 */
   }
 }
 if (!used) {
