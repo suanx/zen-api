@@ -138,20 +138,22 @@ ok(
   impBad + ' 个失败'
 )
 
-/* ---------------- 4. middleware（zip 上传形态的终极方案） ---------------- */
-console.log('\n\x1b[1m4. 全局 middleware（项目根）\x1b[0m')
-const MW = path.join(ROOT, 'middleware.js')
-ok('middleware.js 存在于项目根', fs.existsSync(MW))
+/* ---------------- 4. edgeone-worker（EdgeOne 魔法文件名，全局入口） ---------------- */
+console.log('\n\x1b[1m4. edgeone-worker.js（项目根）\x1b[0m')
+const MW = path.join(ROOT, 'edgeone-worker.js')
+ok('middleware.js 已删除（存在即全站 545）', !fs.existsSync(path.join(ROOT, 'middleware.js')))
+ok('edgeone-worker.js 存在于项目根（平台魔法文件名）', fs.existsSync(MW))
 if (fs.existsSync(MW)) {
   try {
     const mod = await import(pathToFileURL(MW).href)
-    ok('middleware 导出 onRequest', typeof mod.onRequest === 'function')
+    ok('worker 导出 onRequest', typeof mod.onRequest === 'function')
   } catch (err) {
-    ok('middleware import 可解析', false, err.code || err.message)
+    ok('worker import 可解析', false, err.code || err.message)
   }
   const src = fs.readFileSync(MW, 'utf8')
-  ok('middleware 覆盖 /api/ /v1/ /zen/ /anthropic/ 前缀', ['/api/', '/v1/', '/zen/', '/anthropic/'].every((p) => src.includes("'" + p + "'")))
-  ok('middleware 对非 API 调用 context.next() 放行', /context\.next\(\)/.test(src))
+  ok('worker 覆盖 /api/ /v1/ /zen/ /anthropic/ 前缀', ['/api/', '/v1/', '/zen/', '/anthropic/'].every((p) => src.includes("'" + p + "'")))
+  ok('worker 对非 API 调用 context.next() 放行', /context\.next\(\)/.test(src))
+  ok('worker 无跨目录 import（自包含）', !/from '[^']*edge-functions/.test(src))
 }
 ok(
   '根层探针 ping.js 存在（/ping -> pong，验证根层函数注册）',

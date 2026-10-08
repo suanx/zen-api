@@ -1,6 +1,6 @@
 {
   "name": "zen-api-proxy",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "private": true,
   "type": "module",
   "description": "OpenCode Zen 反向代理 · EdgeOne Makers (Edge Functions)",
