@@ -1084,6 +1084,19 @@ function isApiPath(pathname) {
 }
 
 export async function onRequest(context) {
+  try {
+    return await __handler(context)
+  } catch (e) {
+    let p = '?'
+    try { p = new URL(context.request.url).pathname } catch (e2) {}
+    return new Response(JSON.stringify({ mw: 'fatal', stage: 'handler', msg: String((e && e.message) || e), path: p }), {
+      status: 500,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'x-mw-version': 'defensive-v2' },
+    })
+  }
+}
+
+async function __handler(context) {
   const request = context.request
   let pathname = '/'
   try {

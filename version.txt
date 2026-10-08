@@ -1,12 +1,12 @@
 zen-api-final 部署指纹
 =====================
-build   : 13
-package : 1.0.13
-built   : 2026-10-08 17:18
+build   : 14
+package : 1.0.14
+built   : 2026-10-08 17:27
 mode    : root-middleware (zip 上传形态: 仅根层函数生效, API 由 middleware 短路处理)
 
 判别方法:
-  GET /version.txt          -> 含 build 13 即本包已部署
+  GET /version.txt          -> 含 build 14 即本包已部署
   GET /ping                 -> pong 即根层函数注册正常
   GET /health               -> 200 JSON 即配置状态
   GET /api/zen/v1/models    -> 200 JSON 即全部正常
